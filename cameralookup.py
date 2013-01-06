@@ -1,17 +1,19 @@
-from Tkinter import Tk, Canvas, Frame, BOTH, N, S, E, W, Scrollbar, VERTICAL, HORIZONTAL
-import Tkinter
+#from Tkinter import Tk, Canvas, Frame, BOTH, N, S, E, W, Scrollbar, VERTICAL, HORIZONTAL
+from Tkinter import *
 import math
 import pickle
+#import ImageTk
+from PIL import ImageTk, Image
 
 screenSize = [600,600]
-canvasSize = [2000,2000]
+canvasSize = [5000,5000]
 
 class fieldOfView:
 	
-	def initAll(self):
+	def initAll(self, coords):
 		self.initHandles()
 		# The location of the camera, 0-999
-		self.loc = [100,100]
+		self.loc = coords
 		# The logical camera number
 		self.cam_num = 1001
 		# The preset of this view, if it's a PTZ camera
@@ -36,6 +38,7 @@ class fieldOfView:
 		self.handleSize = 10
 		self.lineThickness = 2
 		self.init = 1
+		self.selected = 0
 	
 	def initHandles(self):
 		self.viewHandle = 0
@@ -57,9 +60,10 @@ class fieldOfView:
 		return False
 		
 	def getHandleFromCoords(self, coords):
+		grabability = 1
 		# This function returns the handle number of a corner circle if it encompasses the supplied coordinates
 		
-		if coordDistance(coords, self.loc) < self.cameraSize/2:
+		if coordDistance(coords, self.loc) < self.cameraSize/grabability:
 			return self.cameraHandle
 		
 		# Translate to camera-centric coordinates
@@ -67,15 +71,15 @@ class fieldOfView:
 		coords[1] -= self.loc[1]
 		
 		for i in range(len(self.view)):
-			if coordDistance(coords, self.view[i]) < self.handleSize/2:
+			if coordDistance(coords, self.view[i]) < self.handleSize/grabability:
 				return self.viewCornersHandles[i]
 		
 		for j in range(self.blindCount):
 			for i in range(len(self.blinds[j])):
-				if coordDistance(coords, self.blinds[j][i]) < self.handleSize/2:
+				if coordDistance(coords, self.blinds[j][i]) < self.handleSize/grabability:
 						return self.blindCornersHandles[j][i]
 		return 0
-		
+	
 	def updateCoord(self, myHandle, coord):
 		# This function is used to instruct this class that one of its handles has moved
 		# Translate to camera-centric coordinates
@@ -112,15 +116,40 @@ class fieldOfView:
 		return True
 
 	def draw(self, myCanvas):
+		# This function draws a view's polygon and blindspots
 		self.initHandles()
 		points = []
 		
+		if self.selected == 1:
+			myViewOutline = 'green'
+			myViewFill = ''
+			myViewCornerOutline = 'green'
+			myViewCornerFill = 'green'
+			myBlindOutline = 'red'
+			myBlindFill = ''
+			myBlindCornerOutline = 'red'
+			myBlindCornerFill = 'red'
+			myCameraOutline = 'purple'
+			myCameraFill = 'purple'
+		else:
+			
+			myViewOutline = 'dark green'
+			myViewFill = ''
+			myViewCornerOutline = 'dark green'
+			myViewCornerFill = 'dark green'
+			myBlindOutline = 'dark red'
+			myBlindFill = ''
+			myBlindCornerOutline = 'dark red'
+			myBlindCornerFill = 'dark red'
+			myCameraOutline = 'dark violet'
+			myCameraFill = 'dark violet'
+		# Draw the camera circle
 		self.cameraHandle = myCanvas.create_oval(	self.loc[0]-self.cameraSize/2,
 													self.loc[1]-self.cameraSize/2,
 													self.loc[0]+self.cameraSize/2,
 													self.loc[1]+self.cameraSize/2,
-													outline='purple',fill='purple')
-		
+													outline=myCameraOutline,fill=myCameraFill, tags='foreground')
+		# Draw the view polygon, and circles at the corners
 		for i in range(len(self.view)):
 			points.append(self.view[i][0]+self.loc[0])
 			points.append(self.view[i][1]+self.loc[1])
@@ -128,10 +157,10 @@ class fieldOfView:
 																self.view[i][1]+self.loc[1]-self.handleSize/2,
 																self.view[i][0]+self.loc[0]+self.handleSize/2,
 																self.view[i][1]+self.loc[1]+self.handleSize/2,
-																outline='green',fill='green'))
-		self.viewHandle = myCanvas.create_polygon(points, outline='green',fill='',width=self.lineThickness)
-		
-		
+																outline=myViewCornerOutline,fill=myViewCornerFill, tags='foreground'))
+		self.viewHandle = myCanvas.create_polygon(points, outline=myViewOutline,fill=myViewFill,width=self.lineThickness, tags='foreground')
+
+		# Draw in the blind spot polygons and their corner circles
 		for j in range(self.blindCount):
 			points = []
 			for i in range(len(self.blinds[j])):
@@ -142,21 +171,23 @@ class fieldOfView:
 																		self.blinds[j][i][1]+self.loc[1]-self.handleSize/2,
 																		self.blinds[j][i][0]+self.loc[0]+self.handleSize/2,
 																		self.blinds[j][i][1]+self.loc[1]+self.handleSize/2,
-																		outline='red',fill='red'))
-			self.blindHandles.append(myCanvas.create_polygon(points, outline='red',fill='',width=self.lineThickness))
+																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground'))
+			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
 		'''print self.viewHandle
 		print self.viewCornersHandles
 		print self.blindHandles		
 		print self.blindCornersHandles'''
 		
-	def __init__(self):
-		self.initAll()
+	def __init__(self, coords):
+		self.initAll(coords)
 		print "Butts"
 
 def coordDistance(coord1, coord2):
+	# This calculates the distance between two points on a cartesian plane.
 	return math.sqrt( ( coord1[0]-coord2[0] )**2 + ( coord1[1]-coord2[1] )**2 )
 
 def point_inside_polygon(x,y,poly):
+	# This calculates whether a given point lies within a polygon.
 	# http://geospatialpython.com/2011/01/point-in-polygon.html
 	n = len(poly)
 	inside =False
@@ -175,32 +206,31 @@ def point_inside_polygon(x,y,poly):
 
 	return inside
 	
-class Example(Frame):
+class CameraLookup(Frame):
 	canvas = 0
 	handle = 0
 	editFov = 0
 	callbackLock = 0
 	fov = []
+	background = 0
+	dragcoords = []
 	
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
-		
-		#self.fov.append(fieldOfView())
 		try:
 			self.loadFromFile()
 		except IOError:
 			self.fov.append(fieldOfView())
 			self.saveToFile()
 
-		#print self.fov
 		self.parent = parent		
 		self.initUI()
 		
 		
 	def initUI(self):
-		self.parent.title("Shapes")		
+		# This function sets up the window.
+		self.parent.title("Camera Lookup")		
 		self.pack(fill=BOTH, expand=1)
-		#self.pack(fill=BOTH, expand=1)
 
 		#self.canvas = Canvas(self,width=canvasSize[0],height=canvasSize[1])
 		#self.canvas.config(scrollregion = (0,0,canvasSize[0],canvasSize[1]))
@@ -215,12 +245,10 @@ class Example(Frame):
 		vScroll.grid(row=0, column=1, sticky="ns")
 		self.grid_rowconfigure(0, weight=1)
 		self.grid_columnconfigure(0, weight=1)
-		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]))
+		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]),xscrollincrement=1,yscrollincrement=1)
 		
-		#the scrollbar for that canvas
-		#self.vscroll = Scrollbar(self, orient = VERTICAL, command = self.canvas.yview )
-		#self.vscroll.grid(column = 1, row = 0, sticky = N+S+E)
-		#self.canvas["yscrollcommand"] = self.vscroll.set
+		self.background = ImageTk.PhotoImage(file="bg_5k.png")
+		self.canvas.create_image(0, 0, image = self.background, anchor = NW)
 		
 		self.draw()
 		self.canvas.focus_set()
@@ -228,41 +256,64 @@ class Example(Frame):
 		self.canvas.bind("<Button-1>", self.clickCallback)
 		self.canvas.bind("<Button1-ButtonRelease>", self.releaseCallback)
 		
+		self.canvas.bind("<Button-3>", self.rclickCallback)
+		self.canvas.bind("<Button3-ButtonRelease>", self.rreleaseCallback)
+		
 		#self.canvas.bind("<Button1-Motion>", self.moveCallback)
 		
 		#self.canvas.pack(fill=BOTH, expand=1)
 		
+	def rclickCallback(self, event):
+		# This handles the right click event, and stores the coordinates to begin a drag
+		self.dragcoords = [event.x, event.y]
+	
+	def rreleaseCallback(self, event):
+		# This handles the right click release, completing a drag
+		self.canvas.xview_scroll(-(event.x-self.dragcoords[0]), UNITS)
+		self.canvas.yview_scroll(-(event.y-self.dragcoords[1]), UNITS)
+		#self.canvas.yview += int(event.y)-self.dragcoords[1]
+		#self.canvas.configure(yscrollcommand=vScroll.set, xscrollcommand=hScroll.set)
+	
 	def clickCallback(self, event):
+		# This handles a left click, and works out what was clicked.
 		if self.callbackLock == 1:
 			return
 		else:
 			self.callbackLock = 1
 		#print "Woo!"+str(event.widget.find_closest(event.x, event.y)[0])
 		for i in range(len(self.fov)):
-			self.handle = self.fov[i].getHandleFromCoords([event.x,event.y])
+			self.handle = self.fov[i].getHandleFromCoords([event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
 			if self.handle != 0:
 				self.editFov = i
+				self.deselectAll()
+				self.fov[self.editFov].selected = 1
 				break
+		
 		self.callbackLock = 0
+
+	def deselectAll(self):
+		for i in range(len(self.fov)):
+			self.fov[i].selected = 0
 			
 	def releaseCallback(self, event):
+		# This handles the left click release, carrying out the left click drag to reposition a circle
 		if self.callbackLock == 1:
 			return
 		else:
 			self.callbackLock = 1
-		self.fov[self.editFov].updateCoord(self.handle,[event.x,event.y])
+		self.fov[self.editFov].updateCoord(self.handle,[event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
 		self.draw()
 		self.saveToFile()
 		self.callbackLock = 0
 		
 	def keyCallback(self, event):
+		# This handles keyboard keypresses.
 		if self.callbackLock == 1:
 			return
 		else:
 			self.callbackLock = 1
 		if event.char == 'a':
-			print "Adding"
-			self.fov.append(fieldOfView())
+			self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
 			self.draw()
 			self.saveToFile()
 		elif event.char == 'q':
@@ -272,33 +323,27 @@ class Example(Frame):
 		self.callbackLock = 0
 		
 	def loadFromFile(self):
-		print "Loading"
+		# This loads a list of views into memory from a file.
 		f = open('views.sav', 'r')
-		#stream = f.read()
-		#self.fov = jason.loads(stream)
 		self.fov = pickle.load(f)
 		f.close()
 	
 	def saveToFile(self):
+		# This saves the current list of views to a file.
 		f = open('views.sav', 'w')
-		#stream = json.dumps(self.fov)
 		pickle.dump(self.fov, f)
-		#f.write(stream)
 		f.close()		
-		print "Saving"
+		print "Saved."
 		
 	def draw(self):
-		#for i in range(10000):
-		#	self.canvas.delete(i)
-		self.canvas.delete('all')
+		# This draws all the views.
+		self.canvas.delete('foreground')
 		for i in range(len(self.fov)):
-			self.fov[i].draw(self.canvas)
-		
-		
+			self.fov[i].draw(self.canvas)		
 		
 def main():
 	root = Tk()
-	ex = Example(root)
+	ex = CameraLookup(root)
 	root.geometry(str(screenSize[0])+"x"+str(screenSize[1])+"+100+100")
 	root.mainloop()  
 
