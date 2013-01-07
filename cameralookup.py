@@ -166,15 +166,17 @@ class fieldOfView:
 		for j in range(self.blindCount):
 			points = []
 			for i in range(len(self.blinds[j])):
-				self.blindCornersHandles.append([])
+				self.blindCornersHandles[j].append([])
 				points.append(self.blinds[j][i][0]+self.loc[0])
 				points.append(self.blinds[j][i][1]+self.loc[1])
-				self.blindCornersHandles[j].append(myCanvas.create_oval(self.blinds[j][i][0]+self.loc[0]-self.handleSize/2,
+				self.blindCornersHandles[j][i] = myCanvas.create_oval(self.blinds[j][i][0]+self.loc[0]-self.handleSize/2,
 																		self.blinds[j][i][1]+self.loc[1]-self.handleSize/2,
 																		self.blinds[j][i][0]+self.loc[0]+self.handleSize/2,
 																		self.blinds[j][i][1]+self.loc[1]+self.handleSize/2,
-																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground'))
+																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground')
 			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
+
+		print self.blindCornersHandles
 		
 	def __init__(self, coords):
 		self.initAll(coords)
