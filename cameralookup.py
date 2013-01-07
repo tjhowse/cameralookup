@@ -22,6 +22,7 @@ class fieldOfView:
 		self.view = [[50,1],[1,200],[200,200],[100,1]]
 		# A list of the blind spots in the view, relative to the camera's coordinates
 		self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
+		#self.blinds = [[[]]]
 		self.blindCount = len(self.blinds)
 		# The handle of the view polygon
 		self.viewHandle = 0
@@ -173,10 +174,6 @@ class fieldOfView:
 																		self.blinds[j][i][1]+self.loc[1]+self.handleSize/2,
 																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground'))
 			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
-		'''print self.viewHandle
-		print self.viewCornersHandles
-		print self.blindHandles		
-		print self.blindCornersHandles'''
 		
 	def __init__(self, coords):
 		self.initAll(coords)
@@ -214,6 +211,8 @@ class CameraLookup(Frame):
 	fov = []
 	background = 0
 	dragcoords = []
+	clickCoords = []
+	listSelection = None
 	
 	def __init__(self, parent):
 		Frame.__init__(self, parent)
@@ -235,23 +234,31 @@ class CameraLookup(Frame):
 		#self.canvas = Canvas(self,width=canvasSize[0],height=canvasSize[1])
 		#self.canvas.config(scrollregion = (0,0,canvasSize[0],canvasSize[1]))
 
+		self.viewListbox = Listbox(self, selectmode=BROWSE)
+		viewListboxScroll = Scrollbar(self, orient="v", command=self.viewListbox.yview)
+		self.viewListbox.configure(yscrollcommand=viewListboxScroll.set)
+		
 		self.canvas = Canvas(self)
+		self.canvas.pack(fill=BOTH,expand=1)
 		hScroll = Scrollbar(self, orient="h", command=self.canvas.xview)
 		vScroll = Scrollbar(self, orient="v", command=self.canvas.yview)
 		self.canvas.configure(yscrollcommand=vScroll.set, xscrollcommand=hScroll.set)
 		
-		self.canvas.grid(row=0,column=0,sticky="nsew")
-		hScroll.grid(row=1, column=0, stick="ew")
-		vScroll.grid(row=0, column=1, sticky="ns")
+		self.viewListbox.grid(row=0, column=1, sticky="nsew")
+		viewListboxScroll.grid(row=0, column=0, sticky="ns")
+		self.canvas.grid(row=0,column=2,sticky="nsew")
+		hScroll.grid(row=1, column=2, stick="ew")
+		vScroll.grid(row=0, column=3, sticky="ns")
 		self.grid_rowconfigure(0, weight=1)
-		self.grid_columnconfigure(0, weight=1)
+		self.grid_columnconfigure(2, weight=1)
 		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]),xscrollincrement=1,yscrollincrement=1)
 		
 		self.background = ImageTk.PhotoImage(file="bg_5k.png")
 		self.canvas.create_image(0, 0, image = self.background, anchor = NW)
 		
 		self.draw()
-		self.canvas.focus_set()
+		#self.canvas.focus_set()
+		
 		self.canvas.bind("<Key>", self.keyCallback)
 		self.canvas.bind("<Button-1>", self.clickCallback)
 		self.canvas.bind("<Button1-ButtonRelease>", self.releaseCallback)
@@ -259,6 +266,7 @@ class CameraLookup(Frame):
 		self.canvas.bind("<Button-3>", self.rclickCallback)
 		self.canvas.bind("<Button3-ButtonRelease>", self.rreleaseCallback)
 		
+		self.poll()
 		#self.canvas.bind("<Button1-Motion>", self.moveCallback)
 		
 		#self.canvas.pack(fill=BOTH, expand=1)
@@ -284,12 +292,20 @@ class CameraLookup(Frame):
 		for i in range(len(self.fov)):
 			self.handle = self.fov[i].getHandleFromCoords([event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
 			if self.handle != 0:
-				self.editFov = i
-				self.deselectAll()
-				self.fov[self.editFov].selected = 1
+				self.selectView(i)
 				break
 		
 		self.callbackLock = 0
+		self.clickCoords = [event.x, event.y]
+		
+	def selectView(self, index):
+		print "Deselecting index: "+str(self.editFov)+" Selecting index: "+str(index)
+		self.deselectAll();
+		self.editFov = index
+		self.fov[self.editFov].selected = 1
+		#self.viewListbox.selection_clear(0,END)
+		self.viewListbox.selection_set(self.editFov)
+		#self.draw()
 
 	def deselectAll(self):
 		for i in range(len(self.fov)):
@@ -301,14 +317,19 @@ class CameraLookup(Frame):
 			return
 		else:
 			self.callbackLock = 1
-		self.fov[self.editFov].updateCoord(self.handle,[event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
-		self.draw()
-		self.saveToFile()
+		
+		if self.clickCoords != [event.x, event.y]:
+			self.fov[self.editFov].updateCoord(self.handle,[event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
+			self.saveToFile()
+			
+		self.draw()			
 		self.callbackLock = 0
 		
 	def keyCallback(self, event):
 		# This handles keyboard keypresses.
+		print "Keypressed"
 		if self.callbackLock == 1:
+			print "locked"
 			return
 		else:
 			self.callbackLock = 1
@@ -316,6 +337,12 @@ class CameraLookup(Frame):
 			self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
 			self.draw()
 			self.saveToFile()
+		elif event.char == 'd':
+			if self.editFov >= 0:
+				print "Deleting: "+str(self.editFov)
+				del self.fov[self.editFov]
+				self.selectView(0)
+				self.draw()
 		elif event.char == 'q':
 			self.saveToFile()
 			quit()
@@ -337,9 +364,29 @@ class CameraLookup(Frame):
 		
 	def draw(self):
 		# This draws all the views.
+		
+		self.viewListbox.delete(0,END)
+		
 		self.canvas.delete('foreground')
 		for i in range(len(self.fov)):
-			self.fov[i].draw(self.canvas)		
+			self.fov[i].draw(self.canvas)
+			self.viewListbox.insert(END,str(self.fov[i].cam_num) + "-" + str(self.fov[i].preset))
+
+		self.viewListbox.selection_set(self.editFov)
+		self.canvas.focus_set()
+
+	def poll(self):
+		# This is a grotty hack to track changes in the selected item in the list
+		current_selection = self.viewListbox.curselection()
+		if len(current_selection) == 0:
+			self.after(250,self.poll);
+			return
+		if int(current_selection[0]) != self.editFov:
+			self.selectView(int(current_selection[0]))
+			self.canvas.xview_moveto(((self.fov[self.editFov].loc[0]-(self.canvas.winfo_width()/2))/canvasSize[0]))
+			self.canvas.yview_moveto(((self.fov[self.editFov].loc[1]-(self.canvas.winfo_height()/2))/canvasSize[1]))
+			self.draw()
+		self.after(250,self.poll);
 		
 def main():
 	root = Tk()
