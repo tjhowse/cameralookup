@@ -4,6 +4,7 @@ import math
 import pickle
 #import ImageTk
 import tkSimpleDialog
+import tkMessageBox
 from PIL import ImageTk, Image
 
 screenSize = [600,600]
@@ -25,6 +26,7 @@ class fieldOfView:
 		#self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
 		self.blinds = [[[]]]
 		self.blindCount = 0
+		self.selectedBlind = 0
 		# The handle of the view polygon
 		self.viewHandle = 0
 		# The handles of the corner circles of the view
@@ -81,7 +83,8 @@ class fieldOfView:
 				for i in range(len(self.blinds[j])):
 				#for corner in blind:			
 					if coordDistance(coords, self.blinds[j][i]) < self.handleSize/grabability:
-							return self.blindCornersHandles[j][i]
+						self.selectedBlind = j
+						return self.blindCornersHandles[j][i]
 		return 0
 	
 	def updateCoord(self, myHandle, coord):
@@ -105,6 +108,20 @@ class fieldOfView:
 				self.blinds[i][self.blindCornersHandles[i].index(myHandle)] = coord
 				return True
 		self.init = 0
+	
+	def addBlindSpot(self):
+		self.blinds.append([[60,60],[100,60],[100,100],[60,100]])
+		self.blindCount = self.blindCount + 1
+		self.selectedBlind = self.blindCount - 1
+		
+	def delBlindSpot(self, index):
+		if index <= self.blindCount:
+			del self.blinds[index]
+			self.blindCount = self.blindCount - 1
+			self.selectedBlind = 0
+			
+	def delSelectedBlindSpot(self):
+		self.delBlindSpot(self.selectedBlind)
 	
 	def inFoV(self, coordToCheck):
 		# This function checks if the provided coordinate is within the field's view
@@ -130,22 +147,29 @@ class fieldOfView:
 			myViewFill = ''
 			myViewCornerOutline = 'green'
 			myViewCornerFill = 'green'
-			myBlindOutline = 'red'
-			myBlindFill = ''
-			myBlindCornerOutline = 'red'
-			myBlindCornerFill = 'red'
+			myUnselectedBlindOutline = 'dark red'
+			myUnselectedBlindFill = ''
+			myUnselectedBlindCornerOutline = 'dark red'
+			myUnselectedBlindCornerFill = 'dark red'
+			mySelectedBlindOutline = 'red'
+			mySelectedBlindFill = ''
+			mySelectedBlindCornerOutline = 'red'
+			mySelectedBlindCornerFill = 'red'			
 			myCameraOutline = 'purple'
 			myCameraFill = 'purple'
-		else:
-			
+		else:			
 			myViewOutline = 'dark green'
 			myViewFill = ''
 			myViewCornerOutline = 'dark green'
 			myViewCornerFill = 'dark green'
-			myBlindOutline = 'dark red'
-			myBlindFill = ''
-			myBlindCornerOutline = 'dark red'
-			myBlindCornerFill = 'dark red'
+			myUnselectedBlindOutline = 'grey'
+			myUnselectedBlindFill = ''
+			myUnselectedBlindCornerOutline = 'grey'
+			myUnselectedBlindCornerFill = 'grey'
+			mySelectedBlindOutline = 'grey'
+			mySelectedBlindFill = ''
+			mySelectedBlindCornerOutline = 'grey'
+			mySelectedBlindCornerFill = 'grey'
 			myCameraOutline = 'dark violet'
 			myCameraFill = 'dark violet'
 		# Draw the camera circle
@@ -166,13 +190,24 @@ class fieldOfView:
 		self.viewHandle = myCanvas.create_polygon(points, outline=myViewOutline,fill=myViewFill,width=self.lineThickness, tags='foreground')
 
 		# Draw in the blind spot polygons and their corner circles
-		for blind in self.blinds:
-			if len(blind) < 4:
+		for j in range(len(self.blinds)):
+			if len(self.blinds[j]) < 4:
 				break
+			if j == self.selectedBlind:
+				myBlindOutline = mySelectedBlindOutline
+				myBlindFill = mySelectedBlindFill
+				myBlindCornerOutline = mySelectedBlindCornerOutline
+				myBlindCornerFill = mySelectedBlindCornerFill
+			else:
+				myBlindOutline = myUnselectedBlindOutline
+				myBlindFill = myUnselectedBlindFill
+				myBlindCornerOutline = myUnselectedBlindCornerOutline
+				myBlindCornerFill = myUnselectedBlindCornerFill
 			points = []
-
+			self.blindCornersHandles.append([])
 			for i in range(len(self.blinds[j])):
 				self.blindCornersHandles[j].append([])
+				#self.blindCornersHandles[j].append([0,0,0,0])
 				points.append(self.blinds[j][i][0]+self.loc[0])
 				points.append(self.blinds[j][i][1]+self.loc[1])
 				self.blindCornersHandles[j][i] = myCanvas.create_oval(self.blinds[j][i][0]+self.loc[0]-self.handleSize/2,
@@ -182,11 +217,9 @@ class fieldOfView:
 																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground')
 			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
 
-		print self.blindCornersHandles
 
 	def __init__(self, coords):
 		self.initAll(coords)
-		print "Butts"
 
 def coordDistance(coord1, coord2):
 	# This calculates the distance between two points on a cartesian plane.
@@ -247,6 +280,8 @@ class CameraLookup(Frame):
 		viewListboxScroll = Scrollbar(self, orient="v", command=self.viewListbox.yview)
 		self.viewListbox.configure(yscrollcommand=viewListboxScroll.set)
 		
+		self.helpButton = Button(self, text="Help", command=self.helpPrompt)
+		
 		self.canvas = Canvas(self)
 		self.canvas.pack(fill=BOTH,expand=1)
 		hScroll = Scrollbar(self, orient="h", command=self.canvas.xview)
@@ -258,6 +293,7 @@ class CameraLookup(Frame):
 		self.canvas.grid(row=0,column=2,sticky="nsew")
 		hScroll.grid(row=1, column=2, stick="ew")
 		vScroll.grid(row=0, column=3, sticky="ns")
+		self.helpButton.grid(row=1, column=1,sticky="sew")
 		self.grid_rowconfigure(0, weight=1)
 		self.grid_columnconfigure(2, weight=1)
 		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]),xscrollincrement=1,yscrollincrement=1)
@@ -279,7 +315,10 @@ class CameraLookup(Frame):
 		#self.canvas.bind("<Button1-Motion>", self.moveCallback)
 		
 		#self.canvas.pack(fill=BOTH, expand=1)
-		
+	
+	def helpPrompt(self):
+		tkMessageBox.showinfo("Hotkeys", "A - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit")
+	
 	def rclickCallback(self, event):
 		# This handles the right click event, and stores the coordinates to begin a drag
 		self.dragcoords = [event.x, event.y]
@@ -306,19 +345,7 @@ class CameraLookup(Frame):
 		
 		self.callbackLock = 0
 		self.clickCoords = [event.x, event.y]
-		
-	def selectView(self, index):
-		print "Deselecting index: "+str(self.editFov)+" Selecting index: "+str(index)
-		self.deselectAll();
-		self.editFov = index
-		self.fov[self.editFov].selected = 1
-		#self.viewListbox.selection_clear(0,END)
-		self.viewListbox.selection_set(self.editFov)
-		#self.draw()
 
-	def deselectAll(self):
-		for i in range(len(self.fov)):
-			self.fov[i].selected = 0
 			
 	def releaseCallback(self, event):
 		# This handles the left click release, carrying out the left click drag to reposition a circle
@@ -343,26 +370,62 @@ class CameraLookup(Frame):
 		else:
 			self.callbackLock = 1
 		if event.char == 'a':
-			newCamNum = tkSimpleDialog.askinteger("New camera", "New camera number:", initialvalue = 1001)
-			newCamPreset = tkSimpleDialog.askinteger("New camera", "New preset number:", initialvalue = 1)
-			self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
-			self.fov[-1].cam_num = newCamNum
-			self.fov[-1].preset = newCamPreset
-			self.selectView(len(self.fov)-1)
-			self.draw()
-			self.saveToFile()
+			# Add a new view
+			self.addView()
 		elif event.char == 'd':
-			if self.editFov >= 0:
+			# Delete the current view
+			self.delView()
+		elif event.char == 'b':
+			# Add a blindspot to the currently selected view
+			self.addBlindspot()
+		elif event.char == 'n':
+			# Deletes the selected blindspot
+			self.delBlindspot()
+		elif event.char == 'q':
+			# Save and quit the program.
+			self.saveToFile()
+			quit()
+		
+		self.draw()
+		self.saveToFile()	
+		self.callbackLock = 0
+		
+	def addView(self):
+		newCamNum = tkSimpleDialog.askinteger("New camera", "New camera number:", initialvalue = 1001)
+		newCamPreset = tkSimpleDialog.askinteger("New camera", "New preset number:", initialvalue = 1)
+		self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
+		self.fov[-1].cam_num = newCamNum
+		self.fov[-1].preset = newCamPreset
+		self.selectView(len(self.fov)-1)
+		
+	def delView(self):
+		if self.editFov >= 0:
+			if tkMessageBox.askyesno("Delete camera", "Are you sure?"):
 				print "Deleting: "+str(self.editFov)
 				del self.fov[self.editFov]
 				self.selectView(0)
-				self.draw()
-		elif event.char == 'q':
-			self.saveToFile()
-			quit()
-			
-		self.callbackLock = 0
+	
+	def addBlindspot(self):
+		if self.editFov >= 0:
+			self.fov[self.editFov].addBlindSpot()
+
+	def delBlindspot(self):
+		if self.editFov >= 0:
+			self.fov[self.editFov].delSelectedBlindSpot()
+			self.draw()
 		
+	def selectView(self, index):
+		self.deselectAll();
+		self.editFov = index
+		self.fov[self.editFov].selected = 1
+		self.viewListbox.selection_clear(0,END)
+		self.viewListbox.selection_set(self.editFov)
+		#self.draw()
+
+	def deselectAll(self):
+		for i in range(len(self.fov)):
+			self.fov[i].selected = 0
+			
 	def loadFromFile(self):
 		# This loads a list of views into memory from a file.
 		f = open('views.sav', 'r')
@@ -391,6 +454,9 @@ class CameraLookup(Frame):
 
 	def poll(self):
 		# This is a grotty hack to track changes in the selected item in the list
+		if self.callbackLock == 1:
+			self.after(250,self.poll);
+			return
 		current_selection = self.viewListbox.curselection()
 		if len(current_selection) == 0:
 			self.after(250,self.poll);
