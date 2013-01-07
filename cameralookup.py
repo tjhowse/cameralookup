@@ -24,7 +24,7 @@ class fieldOfView:
 		self.view = [[50,1],[1,200],[200,200],[100,1]]
 		# A list of the blind spots in the view, relative to the camera's coordinates
 		#self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
-		self.blinds = [[[]]]
+		self.blinds = []
 		self.blindCount = 0
 		self.selectedBlind = 0
 		# The handle of the view polygon
@@ -170,8 +170,8 @@ class fieldOfView:
 			mySelectedBlindFill = ''
 			mySelectedBlindCornerOutline = 'grey'
 			mySelectedBlindCornerFill = 'grey'
-			myCameraOutline = 'dark violet'
-			myCameraFill = 'dark violet'
+			myCameraOutline = 'grey'
+			myCameraFill = 'grey'
 		# Draw the camera circle
 		self.cameraHandle = myCanvas.create_oval(	self.loc[0]-self.cameraSize/2,
 													self.loc[1]-self.cameraSize/2,
@@ -363,7 +363,6 @@ class CameraLookup(Frame):
 		
 	def keyCallback(self, event):
 		# This handles keyboard keypresses.
-		print "Keypressed"
 		if self.callbackLock == 1:
 			print "locked"
 			return
@@ -393,6 +392,8 @@ class CameraLookup(Frame):
 	def addView(self):
 		newCamNum = tkSimpleDialog.askinteger("New camera", "New camera number:", initialvalue = 1001)
 		newCamPreset = tkSimpleDialog.askinteger("New camera", "New preset number:", initialvalue = 1)
+		if newCamNum == None or newCamPreset == None:
+			return
 		self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
 		self.fov[-1].cam_num = newCamNum
 		self.fov[-1].preset = newCamPreset
