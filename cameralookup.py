@@ -43,10 +43,10 @@ class fieldOfView:
 		self.blindCornersHandles = [[]]
 		# The camera circle handle
 		self.cameraHandle = 0
-		self.cameraSize = 15
+		self.cameraSize = 10
 		# The size of the corner handle circles
-		self.handleSize = 10
-		self.lineThickness = 2
+		self.handleSize = 5
+		self.lineThickness = 1
 		self.init = 1
 		self.selected = 0
 	
@@ -493,7 +493,7 @@ class CameraLookup(Frame):
 	
 	def exportDatabase(self):
 		print "Starting export, please wait."
-		for j in range(1000):
+		for j in range(999):
 			for i in range(999):				
 				for view in self.fov:
 					coord = [i*(canvasSize[0]/exportSize[0]),j*(canvasSize[1]/exportSize[1])]
