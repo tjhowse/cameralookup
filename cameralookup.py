@@ -3,6 +3,7 @@ from Tkinter import *
 import math
 import pickle
 #import ImageTk
+import tkSimpleDialog
 from PIL import ImageTk, Image
 
 screenSize = [600,600]
@@ -21,8 +22,8 @@ class fieldOfView:
 		# A list of the coordinates of the view, relative to the camera's coordinates
 		self.view = [[50,1],[1,200],[200,200],[100,1]]
 		# A list of the blind spots in the view, relative to the camera's coordinates
-		self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
-		#self.blinds = [[[]]]
+		#self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
+		self.blinds = [[[]]]
 		self.blindCount = len(self.blinds)
 		# The handle of the view polygon
 		self.viewHandle = 0
@@ -334,7 +335,12 @@ class CameraLookup(Frame):
 		else:
 			self.callbackLock = 1
 		if event.char == 'a':
+			newCamNum = tkSimpleDialog.askinteger("New camera", "New camera number:", initialvalue = 1001)
+			newCamPreset = tkSimpleDialog.askinteger("New camera", "New preset number:", initialvalue = 1)
 			self.fov.append(fieldOfView([self.canvas.canvasx(0)+100,+self.canvas.canvasy(0)+100]))
+			self.fov[-1].cam_num = newCamNum
+			self.fov[-1].preset = newCamPreset
+			self.selectView(len(self.fov)-1)
 			self.draw()
 			self.saveToFile()
 		elif event.char == 'd':
