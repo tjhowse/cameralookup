@@ -9,6 +9,7 @@ from PIL import ImageTk, Image
 
 screenSize = [600,600]
 canvasSize = [5000,5000]
+exportSize = [1000,1000]
 
 class fieldOfView:
 	
@@ -122,20 +123,20 @@ class fieldOfView:
 			
 	def delSelectedBlindSpot(self):
 		self.delBlindSpot(self.selectedBlind)
-	
+			
 	def inFoV(self, coordToCheck):
 		# This function checks if the provided coordinate is within the field's view
 		# Transform the coord into camera-centric coordinates
-		coordToCheck[0] -= loc[0]
-		coordToCheck[1] -= loc[1]
+		coordToCheck[0] -= self.loc[0]
+		coordToCheck[1] -= self.loc[1]
 		# Check if the coord is inside this view
-		if not point_inside_polygon(coordToCheck[0],coordToCheck[1], view):
-			return False
-		# Check to see whether it's also inside a blindspot
-		for i in range(blindCount):
-			if point_inside_polygon(coordToCheck[0],coordToCheck[1], blinds[i]):
-				return False
-		return True
+		if point_inside_polygon(coordToCheck, self.view):
+			# Check to see whether it's also inside a blindspot
+			for blind in self.blinds:
+				if point_inside_polygon(coordToCheck,blind):
+					return False
+			return True
+		return False
 
 	def draw(self, myCanvas):
 		# This function draws a view's polygon and blindspots
@@ -216,8 +217,7 @@ class fieldOfView:
 																		self.blinds[j][i][1]+self.loc[1]+self.handleSize/2,
 																		outline=myBlindCornerOutline,fill=myBlindCornerFill, tags='foreground')
 			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
-
-
+	
 	def __init__(self, coords):
 		self.initAll(coords)
 
@@ -225,9 +225,11 @@ def coordDistance(coord1, coord2):
 	# This calculates the distance between two points on a cartesian plane.
 	return math.sqrt( ( coord1[0]-coord2[0] )**2 + ( coord1[1]-coord2[1] )**2 )
 
-def point_inside_polygon(x,y,poly):
+def point_inside_polygon(coords,poly):
 	# This calculates whether a given point lies within a polygon.
 	# http://geospatialpython.com/2011/01/point-in-polygon.html
+	x = coords[0]
+	y = coords[1]
 	n = len(poly)
 	inside =False
 
@@ -261,7 +263,7 @@ class CameraLookup(Frame):
 		try:
 			self.loadFromFile()
 		except IOError:
-			self.fov.append(fieldOfView())
+			self.fov.append(fieldOfView([100,100]))
 			self.saveToFile()
 
 		self.parent = parent		
@@ -307,7 +309,7 @@ class CameraLookup(Frame):
 		self.canvas.bind("<Key>", self.keyCallback)
 		self.canvas.bind("<Button-1>", self.clickCallback)
 		self.canvas.bind("<Button1-ButtonRelease>", self.releaseCallback)
-		
+		self.canvas.bind("<Button-2>", self.mclickCallback)
 		self.canvas.bind("<Button-3>", self.rclickCallback)
 		self.canvas.bind("<Button3-ButtonRelease>", self.rreleaseCallback)
 		
@@ -322,6 +324,13 @@ class CameraLookup(Frame):
 	def rclickCallback(self, event):
 		# This handles the right click event, and stores the coordinates to begin a drag
 		self.dragcoords = [event.x, event.y]
+	
+	def mclickCallback(self, event):
+		coord = [event.x,event.y]
+		for view in self.fov:
+			coord = [event.x,event.y]
+			if view.inFoV(coord):
+				print "Yay! Camera "+str(view.cam_num)+" preset "+str(view.preset)+ " can see coordinate x: "+str(event.x)+" y: "+str(event.y)
 	
 	def rreleaseCallback(self, event):
 		# This handles the right click release, completing a drag
@@ -380,6 +389,9 @@ class CameraLookup(Frame):
 		elif event.char == 'n':
 			# Deletes the selected blindspot
 			self.delBlindspot()
+		elif event.char == 'e':
+			# Deletes the selected blindspot
+			self.exportDatabase()			
 		elif event.char == 'q':
 			# Save and quit the program.
 			self.saveToFile()
@@ -468,7 +480,16 @@ class CameraLookup(Frame):
 			self.canvas.yview_moveto(((self.fov[self.editFov].loc[1]-(self.canvas.winfo_height()/2))/canvasSize[1]))
 			self.draw()
 		self.after(250,self.poll);
-		
+	
+	def exportDatabase(self):
+		print "Starting export, please wait."
+		for j in range(999):
+			for i in range(999):				
+				for view in self.fov:
+					coord = [i*5,j*5]
+					if view.inFoV(coord):
+						print "Yay! Camera "+str(view.cam_num)+" preset "+str(view.preset)+ " can see coordinate x: "+str(i)+" y: "+str(j)
+		print "Export done"
 def main():
 	root = Tk()
 	ex = CameraLookup(root)
