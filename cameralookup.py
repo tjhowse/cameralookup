@@ -7,8 +7,13 @@ import tkSimpleDialog
 import tkMessageBox
 from PIL import ImageTk, Image
 
+#bgFilename = "bg_5k.png"
+#canvasSize = [5000,5000]
+
+bgFilename = "bg_10k_internal_walls_monochrome.bmp"
+canvasSize = [10000,10000]
+
 screenSize = [600,600]
-canvasSize = [5000,5000]
 exportSize = [1000,1000]
 
 class fieldOfView:
@@ -300,7 +305,9 @@ class CameraLookup(Frame):
 		self.grid_columnconfigure(2, weight=1)
 		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]),xscrollincrement=1,yscrollincrement=1)
 		
-		self.background = ImageTk.PhotoImage(file="bg_5k.png")
+		#self.background = ImageTk.PhotoImage(file="bg_5k.png")
+		#self.background = ImageTk.PhotoImage(file=bgFilename)
+		self.background = ImageTk.BitmapImage(file=bgFilename,foreground="white", background="black",)
 		self.canvas.create_image(0, 0, image = self.background, anchor = NW)
 		
 		self.draw()
@@ -326,11 +333,14 @@ class CameraLookup(Frame):
 		self.dragcoords = [event.x, event.y]
 	
 	def mclickCallback(self, event):
-		coord = [event.x,event.y]
+		found = False
 		for view in self.fov:
-			coord = [event.x,event.y]
+			coord = [event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)]
 			if view.inFoV(coord):
 				print "Yay! Camera "+str(view.cam_num)+" preset "+str(view.preset)+ " can see coordinate x: "+str(event.x)+" y: "+str(event.y)
+				found = True
+		if not found:
+			print "No cameras found for that coord. :("
 	
 	def rreleaseCallback(self, event):
 		# This handles the right click release, completing a drag
@@ -483,10 +493,10 @@ class CameraLookup(Frame):
 	
 	def exportDatabase(self):
 		print "Starting export, please wait."
-		for j in range(999):
+		for j in range(1000):
 			for i in range(999):				
 				for view in self.fov:
-					coord = [i*5,j*5]
+					coord = [i*(canvasSize[0]/exportSize[0]),j*(canvasSize[1]/exportSize[1])]
 					if view.inFoV(coord):
 						print "Yay! Camera "+str(view.cam_num)+" preset "+str(view.preset)+ " can see coordinate x: "+str(i)+" y: "+str(j)
 		print "Export done"
