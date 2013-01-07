@@ -24,7 +24,7 @@ class fieldOfView:
 		# A list of the blind spots in the view, relative to the camera's coordinates
 		#self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
 		self.blinds = [[[]]]
-		self.blindCount = len(self.blinds)
+		self.blindCount = 0
 		# The handle of the view polygon
 		self.viewHandle = 0
 		# The handles of the corner circles of the view
@@ -75,11 +75,13 @@ class fieldOfView:
 		for i in range(len(self.view)):
 			if coordDistance(coords, self.view[i]) < self.handleSize/grabability:
 				return self.viewCornersHandles[i]
-		
-		for j in range(self.blindCount):
-			for i in range(len(self.blinds[j])):
-				if coordDistance(coords, self.blinds[j][i]) < self.handleSize/grabability:
-						return self.blindCornersHandles[j][i]
+		if self.blindCount != 0:
+			for j in range(self.blindCount):
+			#for blind in self.blinds:
+				for i in range(len(self.blinds[j])):
+				#for corner in blind:			
+					if coordDistance(coords, self.blinds[j][i]) < self.handleSize/grabability:
+							return self.blindCornersHandles[j][i]
 		return 0
 	
 	def updateCoord(self, myHandle, coord):
@@ -97,6 +99,7 @@ class fieldOfView:
 		if myHandle in self.viewCornersHandles:
 			self.view[self.viewCornersHandles.index(myHandle)] = coord
 			return True
+			
 		for i in range(self.blindCount):
 			if myHandle in self.blindCornersHandles[i]:
 				self.blinds[i][self.blindCornersHandles[i].index(myHandle)] = coord
@@ -163,8 +166,11 @@ class fieldOfView:
 		self.viewHandle = myCanvas.create_polygon(points, outline=myViewOutline,fill=myViewFill,width=self.lineThickness, tags='foreground')
 
 		# Draw in the blind spot polygons and their corner circles
-		for j in range(self.blindCount):
+		for blind in self.blinds:
+			if len(blind) < 4:
+				break
 			points = []
+
 			for i in range(len(self.blinds[j])):
 				self.blindCornersHandles[j].append([])
 				points.append(self.blinds[j][i][0]+self.loc[0])
@@ -177,7 +183,7 @@ class fieldOfView:
 			self.blindHandles.append(myCanvas.create_polygon(points, outline=myBlindOutline,fill=myBlindFill,width=self.lineThickness, tags='foreground'))
 
 		print self.blindCornersHandles
-		
+
 	def __init__(self, coords):
 		self.initAll(coords)
 		print "Butts"
