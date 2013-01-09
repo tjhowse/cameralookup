@@ -116,21 +116,24 @@ class fieldOfView:
 		self.init = 0
 	
 	def addBlindSpot(self):
+		# Adds a new blind spot to the currently selected view.
 		self.blinds.append([[60,60],[100,60],[100,100],[60,100]])
 		self.blindCount = self.blindCount + 1
 		self.selectedBlind = self.blindCount - 1
 		
 	def delBlindSpot(self, index):
+		# Deletes a blind spot based on its index
 		if index <= self.blindCount:
 			del self.blinds[index]
 			self.blindCount = self.blindCount - 1
 			self.selectedBlind = 0
 			
 	def delSelectedBlindSpot(self):
+		# Deletes the currently selected blind spot.
 		self.delBlindSpot(self.selectedBlind)
 			
 	def inFoV(self, coordToCheck):
-		# This function checks if the provided coordinate is within the field's view
+		# This function checks if the provided coordinate is within the field's view, and outside the blind spots.
 		# Transform the coord into camera-centric coordinates
 		coordToCheck[0] -= self.loc[0]
 		coordToCheck[1] -= self.loc[1]
@@ -268,6 +271,7 @@ class CameraLookup(Frame):
 		try:
 			self.loadFromFile()
 		except IOError:
+			# If this is a new start, add one field of view for starters.
 			self.fov.append(fieldOfView([100,100]))
 			self.saveToFile()
 
@@ -280,13 +284,10 @@ class CameraLookup(Frame):
 		self.parent.title("Camera Lookup")		
 		self.pack(fill=BOTH, expand=1)
 
-		#self.canvas = Canvas(self,width=canvasSize[0],height=canvasSize[1])
-		#self.canvas.config(scrollregion = (0,0,canvasSize[0],canvasSize[1]))
-
+		# Add the GUI components
 		self.viewListbox = Listbox(self, selectmode=BROWSE)
 		viewListboxScroll = Scrollbar(self, orient="v", command=self.viewListbox.yview)
 		self.viewListbox.configure(yscrollcommand=viewListboxScroll.set)
-		
 		self.helpButton = Button(self, text="Help", command=self.helpPrompt)
 		
 		self.canvas = Canvas(self)
@@ -295,6 +296,7 @@ class CameraLookup(Frame):
 		vScroll = Scrollbar(self, orient="v", command=self.canvas.yview)
 		self.canvas.configure(yscrollcommand=vScroll.set, xscrollcommand=hScroll.set)
 		
+		# Arrange the GUI components on a grid.
 		self.viewListbox.grid(row=0, column=1, sticky="nsew")
 		viewListboxScroll.grid(row=0, column=0, sticky="ns")
 		self.canvas.grid(row=0,column=2,sticky="nsew")
@@ -305,14 +307,15 @@ class CameraLookup(Frame):
 		self.grid_columnconfigure(2, weight=1)
 		self.canvas.configure(scrollregion = (0, 0, canvasSize[0], canvasSize[1]),xscrollincrement=1,yscrollincrement=1)
 		
+		# Draw the background in
 		#self.background = ImageTk.PhotoImage(file="bg_5k.png")
 		#self.background = ImageTk.PhotoImage(file=bgFilename)
 		self.background = ImageTk.BitmapImage(file=bgFilename,foreground="white", background="black",)
 		self.canvas.create_image(0, 0, image = self.background, anchor = NW)
 		
 		self.draw()
-		#self.canvas.focus_set()
 		
+		# Hook in the keyboard and mouse buttons needed.
 		self.canvas.bind("<Key>", self.keyCallback)
 		self.canvas.bind("<Button-1>", self.clickCallback)
 		self.canvas.bind("<Button1-ButtonRelease>", self.releaseCallback)
@@ -321,11 +324,9 @@ class CameraLookup(Frame):
 		self.canvas.bind("<Button3-ButtonRelease>", self.rreleaseCallback)
 		
 		self.poll()
-		#self.canvas.bind("<Button1-Motion>", self.moveCallback)
-		
-		#self.canvas.pack(fill=BOTH, expand=1)
 	
 	def helpPrompt(self):
+		# Show a popup describing all the hotkeys.
 		tkMessageBox.showinfo("Hotkeys", "A - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit")
 	
 	def rclickCallback(self, event):
@@ -333,6 +334,7 @@ class CameraLookup(Frame):
 		self.dragcoords = [event.x, event.y]
 	
 	def mclickCallback(self, event):
+		# This handles the middle mouse click event, to check if a given coordinate is inside any camera's FoV.
 		found = False
 		for view in self.fov:
 			coord = [event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)]
@@ -346,8 +348,6 @@ class CameraLookup(Frame):
 		# This handles the right click release, completing a drag
 		self.canvas.xview_scroll(-(event.x-self.dragcoords[0]), UNITS)
 		self.canvas.yview_scroll(-(event.y-self.dragcoords[1]), UNITS)
-		#self.canvas.yview += int(event.y)-self.dragcoords[1]
-		#self.canvas.configure(yscrollcommand=vScroll.set, xscrollcommand=hScroll.set)
 	
 	def clickCallback(self, event):
 		# This handles a left click, and works out what was clicked.
@@ -355,7 +355,6 @@ class CameraLookup(Frame):
 			return
 		else:
 			self.callbackLock = 1
-		#print "Woo!"+str(event.widget.find_closest(event.x, event.y)[0])
 		for i in range(len(self.fov)):
 			self.handle = self.fov[i].getHandleFromCoords([event.x+self.canvas.canvasx(0),event.y+self.canvas.canvasy(0)])
 			if self.handle != 0:
@@ -443,7 +442,6 @@ class CameraLookup(Frame):
 		self.fov[self.editFov].selected = 1
 		self.viewListbox.selection_clear(0,END)
 		self.viewListbox.selection_set(self.editFov)
-		#self.draw()
 
 	def deselectAll(self):
 		for i in range(len(self.fov)):
@@ -493,13 +491,29 @@ class CameraLookup(Frame):
 	
 	def exportDatabase(self):
 		print "Starting export, please wait."
+		try:
+			exportFile = open('export.csv', 'w')
+		except:
+			print "Cannot open export.csv for writing, aborting export."
+			return
+		camCount = 0
 		for j in range(999):
 			for i in range(999):				
+				camCount = 0
+				exportFile.write(str(i)+","+str(j))
 				for view in self.fov:
 					coord = [i*(canvasSize[0]/exportSize[0]),j*(canvasSize[1]/exportSize[1])]
 					if view.inFoV(coord):
 						print "Yay! Camera "+str(view.cam_num)+" preset "+str(view.preset)+ " can see coordinate x: "+str(i)+" y: "+str(j)
+						if camCount < 4:
+							exportFile.write(","+str(view.cam_num)+","+str(view.preset))
+							camCount = camCount + 1
+				for k in range(camCount,4):
+					exportFile.write(",,")
+				exportFile.write("\n")
+		exportFile.close()					
 		print "Export done"
+		
 def main():
 	root = Tk()
 	ex = CameraLookup(root)
