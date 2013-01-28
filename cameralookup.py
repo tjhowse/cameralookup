@@ -16,6 +16,8 @@ canvasSize = [5000,5000]
 screenSize = [600,600]
 exportSize = [1000,1000]
 
+programVersion = 1.01
+
 class fieldOfView:
 	
 	def initAll(self, coords):
@@ -28,6 +30,7 @@ class fieldOfView:
 		self.preset = 0
 		# A list of the coordinates of the view, relative to the camera's coordinates
 		self.view = [[50,1],[1,200],[200,200],[100,1]]
+		self.version = programVersion
 		# A list of the blind spots in the view, relative to the camera's coordinates
 		#self.blinds = [[[60,60],[100,60],[100,100],[60,100]]]
 		self.blinds = []
@@ -55,8 +58,7 @@ class fieldOfView:
 		self.cameraHandle = 0
 		self.viewCornersHandles = []
 		self.blindHandles = []
-		self.blindCornersHandles = [[]]
-		
+		self.blindCornersHandles = [[]]		
 	
 	def handleCheck(self, myHandle):
 		# This function checks if the supplied canvas handle corresponds to anything this class owns
@@ -95,7 +97,6 @@ class fieldOfView:
 	
 	def updateCoord(self, myHandle, coord):
 		# This function is used to instruct this class that one of its handles has moved
-		# Translate to camera-centric coordinates
 		if (min(coord) < 0) or (coord[0] > canvasSize[0]) or (coord[1] > canvasSize[1]):
 			return False
 		if not self.handleCheck(myHandle):
@@ -103,6 +104,7 @@ class fieldOfView:
 		if myHandle == self.cameraHandle:
 			self.loc = coord
 			return True
+		# Translate to camera-centric coordinates
 		coord[0] -= self.loc[0]
 		coord[1] -= self.loc[1]
 		if myHandle in self.viewCornersHandles:
@@ -123,6 +125,8 @@ class fieldOfView:
 		
 	def delBlindSpot(self, index):
 		# Deletes a blind spot based on its index
+		if self.blindCount == 0:
+			return
 		if index <= self.blindCount:
 			del self.blinds[index]
 			self.blindCount = self.blindCount - 1
@@ -327,7 +331,7 @@ class CameraLookup(Frame):
 	
 	def helpPrompt(self):
 		# Show a popup describing all the hotkeys.
-		tkMessageBox.showinfo("Hotkeys", "Version 1.0\nA - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit")
+		tkMessageBox.showinfo("Hotkeys", "Version "+str(programVersion)+"\nA - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit\n\nLeft click - Selection\nLeft drag - Reposition\nRight drag - Pan\nScroll click - Check coordinate")
 	
 	def rclickCallback(self, event):
 		# This handles the right click event, and stores the coordinates to begin a drag
@@ -421,6 +425,9 @@ class CameraLookup(Frame):
 		self.selectView(len(self.fov)-1)
 		
 	def delView(self):
+		if len(self.fov) == 1:
+			# Dodgy hack. Don't permit the deletion of the last camera.
+			return
 		if self.editFov >= 0:
 			if tkMessageBox.askyesno("Delete camera", "Are you sure?"):
 				print "Deleting: "+str(self.editFov)
