@@ -10,8 +10,8 @@ from PIL import ImageTk, Image
 #bgFilename = "bg_5k.png"
 #canvasSize = [5000,5000]
 
-bgFilename = "bg_10k_internal_walls_monochrome.bmp"
-canvasSize = [10000,10000]
+bgFilename = "bg_10k_internal_walls_monochrome_rot.bmp"
+canvasSize = [5000,5000]
 
 screenSize = [600,600]
 exportSize = [1000,1000]
@@ -327,7 +327,7 @@ class CameraLookup(Frame):
 	
 	def helpPrompt(self):
 		# Show a popup describing all the hotkeys.
-		tkMessageBox.showinfo("Hotkeys", "A - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit")
+		tkMessageBox.showinfo("Hotkeys", "Version 1.0\nA - Add camera\nD - Deleted selected camera\nB - Add blindspot\nN - Delete selected blindspot\nQ - Save and quit")
 	
 	def rclickCallback(self, event):
 		# This handles the right click event, and stores the coordinates to begin a drag
@@ -461,8 +461,7 @@ class CameraLookup(Frame):
 		print "Saved."
 		
 	def draw(self):
-		# This draws all the views.
-		
+		# This draws all the views.		
 		self.viewListbox.delete(0,END)
 		
 		self.canvas.delete('foreground')
